@@ -19,6 +19,9 @@
 - Q: Are failed conversions logged? → A: No, only successful conversions are logged
 - Q (Product Owner): Are results shown with a thousands separator? → A: No, results have no thousands separator (9000.00, not 9,000.00)
 - Q (Product Owner): Is there a maximum amount, and how are commas or scientific notation treated? → A: Maximum amount is 1000000; larger amounts show "Amount must be 1000000 or less". Amounts with commas (1,000) or scientific notation (1e5) show "Amount must be a number"
+- Q (Product Owner): How are amounts like .5, 5. and +5 treated? → A: Rejected with "Amount must be a number"
+- Q (Product Owner): What happens if the rates file is missing or unreadable? → A: The error "Rates are unavailable" is shown and no result
+- Q (Product Owner): What happens if the conversion log cannot be written? → A: The error "Could not write the conversion log" is shown and no result
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -82,6 +85,9 @@ Each successful conversion is recorded with the amount, country, result and time
 - A very small valid amount that rounds to 0.00 INR is not expected given the rates (smallest positive amount of 0.01 gives at least 0.90 INR).
 - An amount with more than 2 decimal places (e.g. 2.505) is converted exactly and the result rounded to 2 decimal places.
 - An empty amount or empty country code shows the matching error (amount: "Amount must be a number"; country: "Only US and CA are supported").
+- An amount written as `.5`, `5.` or `+5` is rejected with "Amount must be a number" and no result.
+- If the rates file is missing or unreadable, the user sees the error "Rates are unavailable" and no result.
+- If the conversion log cannot be written, the user sees the error "Could not write the conversion log" and no result (a result is never shown without its log record).
 - When both amount and country are invalid, the amount is checked first, so the user sees only the amount error (e.g. `abc UK` shows "Amount must be a number") and no result.
 
 ## Requirements *(mandatory)*
@@ -104,6 +110,9 @@ Each successful conversion is recorded with the amount, country, result and time
 - **FR-014**: The system MUST show results with no thousands separator (e.g. `9000.00 INR`, not `9,000.00 INR`).
 - **FR-015**: The maximum accepted amount is 1000000 (inclusive). For a larger amount, the system MUST show the error "Amount must be 1000000 or less" and no result.
 - **FR-016**: An amount containing commas (e.g. `1,000`) or scientific notation (e.g. `1e5`) MUST be treated as not a number and show the error "Amount must be a number".
+- **FR-017**: An amount written as `.5`, `5.` or `+5` MUST be treated as not a number and show the error "Amount must be a number".
+- **FR-018**: If the rates file is missing or unreadable, the system MUST show the error "Rates are unavailable" and no result.
+- **FR-019**: If the conversion log cannot be written, the system MUST show the error "Could not write the conversion log" and no result.
 
 ### Key Entities
 
@@ -125,7 +134,7 @@ Each successful conversion is recorded with the amount, country, result and time
 ## Assumptions
 
 - The user supplies an amount and country code via a simple command-line style entry; no web or mobile interface is in scope.
-- Amounts are in dollars (US or Canadian) and are plain decimal numbers up to 1000000; currency symbols, thousands separators (commas) and scientific notation are not supported.
+- Amounts are in dollars (US or Canadian) and are plain decimal numbers up to 1000000; currency symbols, thousands separators (commas), scientific notation and shortcut forms such as `.5`, `5.` and `+5` are not supported.
 - Rates are fixed (US = 90, CA = 100) and only change through an approved edit to the settings file.
 - Out of scope: other countries, live or changing rates, and converting from INR to other currencies.
 - Purpose: a small proof of concept for practising spec-driven development before a larger project.
