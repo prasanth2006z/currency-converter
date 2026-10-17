@@ -22,6 +22,10 @@
 - Q (Product Owner): How are amounts like .5, 5. and +5 treated? → A: Rejected with "Amount must be a number"
 - Q (Product Owner): What happens if the rates file is missing or unreadable? → A: The error "Rates are unavailable" is shown and no result
 - Q (Product Owner): What happens if the conversion log cannot be written? → A: The error "Could not write the conversion log" is shown and no result
+- Q (Product Owner): Who decides which countries are supported, the spec or the rates file? → A: The spec: supported countries are fixed to US and CA. The rates file must contain exactly US and CA; a missing or extra country gives "Rates are unavailable"
+- Q (Product Owner): What happens if the converted result rounds to 0.00? → A: The error "Amount is too small to convert" is shown and no result (for example 0.00001 US)
+- Q (Product Owner): Which rates-file problems give "Rates are unavailable"? → A: A missing or unreadable file, invalid YAML, a missing or extra country, or any rate that is not a number greater than 0
+- Q (Solution Architect): How are wrong command-line arguments and amounts starting with "-" handled? → A: The wrong number of arguments shows usage and exits with code 2 and no result. A first argument starting with "-" is always the amount, never a command-line option
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -62,6 +66,12 @@ When the country or amount is invalid, the user sees a clear error message and n
 6. **Given** the user enters amount `1,000` and country US, **When** they convert, **Then** they see the error "Amount must be a number"
 7. **Given** the user enters amount `1e5` and country US, **When** they convert, **Then** they see the error "Amount must be a number"
 8. **Given** the user enters amount `abc` and country UK, **When** they convert, **Then** they see only the error "Amount must be a number"
+9. **Given** the user enters amount `.5` and country US, **When** they convert, **Then** they see the error "Amount must be a number"
+10. **Given** the user enters amount `-1e5` and country US, **When** they convert, **Then** they see the error "Amount must be a number"
+11. **Given** the user enters amount `-abc` and country US, **When** they convert, **Then** they see the error "Amount must be a number"
+12. **Given** the user enters amount `0.00001` and country US, **When** they convert, **Then** they see the error "Amount is too small to convert"
+13. **Given** the rates file is missing, **When** the user converts 100 US, **Then** they see the error "Rates are unavailable"
+14. **Given** the user enters only one argument, **When** they run the program, **Then** they see a usage message, the program exits with code 2 and no result is shown
 
 ---
 
@@ -76,17 +86,21 @@ Each successful conversion is recorded with the amount, country, result and time
 **Acceptance Scenarios**:
 
 1. **Given** the user converts 100 US successfully, **When** the conversion completes, **Then** a record exists with amount 100, country US, result 9000.00 and the time of conversion
+2. **Given** the conversion log cannot be written, **When** the user converts 100 US, **Then** they see the error "Could not write the conversion log" and no result
 
 ---
 
 ### Edge Cases
 
 - A country code in mixed case (e.g. `Ca`) is treated the same as `CA`.
-- A very small valid amount that rounds to 0.00 INR is not expected given the rates (smallest positive amount of 0.01 gives at least 0.90 INR).
+- A very small amount whose result rounds to 0.00 INR (e.g. `0.00001 US`) is rejected with "Amount is too small to convert" and no result. The smallest US amount that still converts is 0.00006 (gives `0.01 INR`).
 - An amount with more than 2 decimal places (e.g. 2.505) is converted exactly and the result rounded to 2 decimal places.
 - An empty amount or empty country code shows the matching error (amount: "Amount must be a number"; country: "Only US and CA are supported").
 - An amount written as `.5`, `5.` or `+5` is rejected with "Amount must be a number" and no result.
-- If the rates file is missing or unreadable, the user sees the error "Rates are unavailable" and no result.
+- If the rates file is missing, unreadable or invalid YAML, does not contain exactly US and CA, or has a rate that is not a number greater than 0, the user sees the error "Rates are unavailable" and no result.
+- An amount starting with "-" is always treated as the amount: `-5` gives "Amount must be more than 0"; `-1e5`, `-abc` and `-1,000` give "Amount must be a number".
+- With the wrong number of arguments (none, only one, or more than two) the user sees a usage message, the program exits with code 2, and no result is shown.
+- The amount is checked before the rates file is read, so `abc US` shows "Amount must be a number" even when the rates file is missing.
 - If the conversion log cannot be written, the user sees the error "Could not write the conversion log" and no result (a result is never shown without its log record).
 - When both amount and country are invalid, the amount is checked first, so the user sees only the amount error (e.g. `abc UK` shows "Amount must be a number") and no result.
 
@@ -95,9 +109,9 @@ Each successful conversion is recorded with the amount, country, result and time
 ### Functional Requirements
 
 - **FR-001**: Users MUST be able to provide an amount and a country code and receive the equivalent amount in INR.
-- **FR-002**: The system MUST support only two countries: US (1 dollar = 90 INR) and CA (1 dollar = 100 INR).
+- **FR-002**: The system MUST support only two countries, fixed by this specification: US (1 dollar = 90 INR) and CA (1 dollar = 100 INR). The rates file does not add or remove supported countries.
 - **FR-003**: The system MUST accept country codes in small or capital letters.
-- **FR-004**: The result MUST be shown in INR with exactly 2 decimal places, in the form `<amount> INR`.
+- **FR-004**: The result MUST be shown in INR with exactly 2 decimal places, in the form `<result> INR`.
 - **FR-005**: Calculations MUST be exact (no rounding drift); only the final result is rounded to 2 decimal places, with exact halves rounded up (e.g. 0.135 becomes 0.14).
 - **FR-006**: For an unsupported country code, the system MUST show the error "Only US and CA are supported" and no result.
 - **FR-007**: For an amount of zero or less, the system MUST show the error "Amount must be more than 0" and no result.
@@ -111,8 +125,12 @@ Each successful conversion is recorded with the amount, country, result and time
 - **FR-015**: The maximum accepted amount is 1000000 (inclusive). For a larger amount, the system MUST show the error "Amount must be 1000000 or less" and no result.
 - **FR-016**: An amount containing commas (e.g. `1,000`) or scientific notation (e.g. `1e5`) MUST be treated as not a number and show the error "Amount must be a number".
 - **FR-017**: An amount written as `.5`, `5.` or `+5` MUST be treated as not a number and show the error "Amount must be a number".
-- **FR-018**: If the rates file is missing or unreadable, the system MUST show the error "Rates are unavailable" and no result.
+- **FR-018**: If the rates file is missing, unreadable or invalid YAML, does not contain exactly US and CA (a missing or extra country), or has any rate that is not a number greater than 0, the system MUST show the error "Rates are unavailable" and no result.
 - **FR-019**: If the conversion log cannot be written, the system MUST show the error "Could not write the conversion log" and no result.
+- **FR-020**: If the converted result rounds to 0.00 (e.g. `0.00001 US`), the system MUST show the error "Amount is too small to convert" and no result, and MUST NOT log it.
+- **FR-021**: With the wrong number of command-line arguments, the system MUST show a usage message, exit with code 2 and show no result.
+- **FR-022**: An amount starting with "-" MUST always be treated as the amount, never as a command-line option (e.g. `-5`, `-1e5`, `-abc`, `-1,000`).
+- **FR-023**: The system MUST check the amount first, then the country, then read the rates file, then calculate.
 
 ### Key Entities
 
@@ -126,7 +144,7 @@ Each successful conversion is recorded with the amount, country, result and time
 ### Measurable Outcomes
 
 - **SC-001**: All 6 valid examples (100 US, 100 CA, 2.50 US, 100 us, and the maximum 1000000 for US and CA) produce exactly the stated results.
-- **SC-002**: All 8 invalid examples (UK, 0, -5, abc, 1000001, 1,000, 1e5, abc UK) produce exactly the stated error messages, and 100% of invalid inputs show no INR amount.
+- **SC-002**: Every invalid example in this specification (all of User Story 2's scenarios and the edge cases) produces exactly the stated error message, and 100% of invalid inputs show no INR amount.
 - **SC-003**: A user gets a result or error immediately (no noticeable wait) for any input.
 - **SC-004**: 100% of successful conversions have a matching record with amount, country, result and time.
 - **SC-005**: Every example in this specification has a passing automated test.
@@ -135,6 +153,6 @@ Each successful conversion is recorded with the amount, country, result and time
 
 - The user supplies an amount and country code via a simple command-line style entry; no web or mobile interface is in scope.
 - Amounts are in dollars (US or Canadian) and are plain decimal numbers up to 1000000; currency symbols, thousands separators (commas), scientific notation and shortcut forms such as `.5`, `5.` and `+5` are not supported.
-- Rates are fixed (US = 90, CA = 100) and only change through an approved edit to the settings file.
+- Rates are fixed (US = 90, CA = 100) and only change through an approved edit to the settings file. The file holds exactly the two supported countries.
 - Out of scope: other countries, live or changing rates, and converting from INR to other currencies.
 - Purpose: a small proof of concept for practising spec-driven development before a larger project.

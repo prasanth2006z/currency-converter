@@ -10,7 +10,7 @@ python -m converter <amount> <country>
 
 | Argument | Description |
 |----------|-------------|
-| amount | Dollar amount, plain decimal number, more than 0 and at most 1000000 |
+| amount | Dollar amount, plain decimal number, more than 0 and at most 1000000. Always the first argument, even when it starts with "-" |
 | country | `US` or `CA`, any letter case |
 
 ## Success
@@ -27,6 +27,7 @@ python -m converter <amount> <country>
 | `100 us` | `9000.00 INR` |
 | `1000000 US` | `90000000.00 INR` |
 | `1000000 CA` | `100000000.00 INR` |
+| `0.00006 US` | `0.01 INR` |
 
 ## Errors
 
@@ -42,18 +43,29 @@ python -m converter <amount> <country>
 | `abc US` | `Amount must be a number` |
 | `1,000 US` | `Amount must be a number` |
 | `1e5 US` | `Amount must be a number` |
-| `1000001 US` | `Amount must be 1000000 or less` |
+| `-1e5 US` | `Amount must be a number` |
+| `-abc US` | `Amount must be a number` |
+| `-1,000 US` | `Amount must be a number` |
 | `.5 US` | `Amount must be a number` |
 | `5. US` | `Amount must be a number` |
 | `+5 US` | `Amount must be a number` |
+| `1000001 US` | `Amount must be 1000000 or less` |
+| `0.00001 US` | `Amount is too small to convert` |
 | `abc UK` | `Amount must be a number` (amount is checked first) |
+
+Order of checks: amount, then country, then the rates file, then the calculation (spec FR-023). So
+`abc US` shows the amount error even when the rates file is missing.
 
 System errors (spec FR-018 and FR-019), also stderr, exit code 1, no result:
 
 | Situation | stderr |
 |-----------|--------|
-| Rates file missing, unreadable, invalid, or not defining both US and CA | `Rates are unavailable` |
+| Rates file missing, unreadable, invalid YAML, not exactly US and CA, or a rate that is not a number greater than 0 | `Rates are unavailable` |
 | Log line cannot be written | `Could not write the conversion log` |
 
-Missing arguments: argparse prints its usage message to stderr and exits with code 2. No number is
-shown.
+## Wrong number of arguments (spec FR-021)
+
+None, one, or more than two arguments: argparse prints its usage message to stderr and the program
+exits with code 2. stdout is empty and no number is shown. No log line is written.
+
+`-h` and `--help` show the usage help and exit with code 0.

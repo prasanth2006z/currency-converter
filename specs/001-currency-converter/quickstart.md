@@ -32,6 +32,9 @@ Expected: all tests pass. Every spec example has a named test (see the table in 
 | `python -m converter -5 CA` | error: `Amount must be more than 0` |
 | `python -m converter abc US` | error: `Amount must be a number` |
 | `python -m converter 1000001 US` | error: `Amount must be 1000000 or less` |
+| `python -m converter -1e5 US` | error: `Amount must be a number` |
+| `python -m converter 0.00001 US` | error: `Amount is too small to convert` |
+| `python -m converter 100` | usage message, exit code 2 |
 
 Exact output formats and exit codes: [contracts/cli.md](contracts/cli.md).
 
