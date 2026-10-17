@@ -1,0 +1,6 @@
+# Exchange rates: INR per one dollar.
+# Any change to this file needs recorded Product Owner approval (constitution Principle II).
+# The file must contain exactly US and CA, each a number greater than 0.
+rates:
+  US: 90
+  CA: 100
