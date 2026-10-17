@@ -48,7 +48,7 @@ Rates live only in `config/rates.yaml`. Only the Product Owner can approve a cha
 | --- | --- | --- | --- | --- |
 | 0 | Set up the project | Dev | `specify init` | `.specify/`, `.claude/` |
 | 1 | Project rules | EA | `/speckit-constitution` | `.specify/memory/constitution.md` |
-| 2 | What we want | PO | `/speckit-specify` | `specs/001-.../spec.md` |
+| 2 | What we want | PO | `/speckit-specify` | `docs/intent.md` → `specs/001-.../spec.md` |
 | 3 | Remove guesses | PO + QA | `/speckit-clarify` | Clarifications in `spec.md` |
 | 4 | How to build it | SA | `/speckit-plan` | `plan.md`, `research.md`, `data-model.md`, `contracts/` |
 | 5 | Break into tasks | TL | `/speckit-tasks` | `tasks.md` |
@@ -124,43 +124,19 @@ specify init --here --script ps
 - Choose **claude (Claude Code)** as the coding agent.
 - Use `--script ps` on Windows, or `--script sh` on macOS or Linux.
 
-### 0.6 Write the product intent (PO)
-
-Create `docs/intent.md`:
-
-```markdown
-# Intent: Currency converter (POC)
-
-## What we want
-A user types an amount and a country code (US or CA)
-and sees the value in Indian Rupees (INR).
-
-## Why
-To practise our new step-by-step way of working on something small.
-
-## Rules
-- US: 1 dollar = 90 INR
-- CA: 1 dollar = 100 INR
-- Any other country: show a clear error message
-
-## Not included
-- Other countries
-- Live or changing rates
-```
-
-### 0.7 First commit and push to GitHub
+### 0.6 First commit and push to GitHub
 
 Create an **empty** repo named `currency-converter` on github.com. Leave "Add a README" **unticked**. Then run:
 
 ```bash
 git add .
-git commit -m "Add Spec Kit, intent and README"
+git commit -m "Add Spec Kit and README"
 git branch -M main
 git remote add origin https://github.com/YOUR-USERNAME/currency-converter.git
 git push -u origin main
 ```
 
-### 0.8 Create the feature branch
+### 0.7 Create the feature branch
 
 Spec Kit only creates branches when its optional Git hook is installed, so create the branch yourself:
 
@@ -171,7 +147,7 @@ git push -u origin 001-currency-converter
 
 Everything from here on goes on this branch, and arrives in `main` as **one pull request**.
 
-### 0.9 Start Claude Code
+### 0.8 Start Claude Code
 
 ```bash
 claude
@@ -223,16 +199,58 @@ git push
 
 ## Step 2 — Specify: what we want (Product Owner)
 
-Describe **what** and **why** only. Leave out Python, files and technology; the constitution already covers those.
+The PO describes **what** and **why** only. Leave out Python, files and technology; the constitution already covers those.
+
+The idea flows through three documents, each more exact than the last:
+
+| Document | Written by | Purpose | Changes later? |
+| --- | --- | --- | --- |
+| `docs/intent.md` | PO, in their own words | Records the original idea and why | No, it's the starting point |
+| `/speckit-specify` prompt | PO | Points the AI at the intent and adds exact examples | No, it's a one-time input |
+| `spec.md` | AI, reviewed by people | The exact, testable source of truth | Yes, it grows through clarify, plan and analyze |
+
+Keep the PO's words in **one file** (`intent.md`). The prompt only adds what's new, such as exact examples.
+
+### 2.1 The PO writes the intent
+
+Create `docs/intent.md`:
+
+```markdown
+# Intent: Currency converter (POC)
+
+## What we want
+A user types an amount and a country code (US or CA)
+and sees the value in Indian Rupees (INR).
+
+## Why
+To practise our new step-by-step way of working on something small.
+
+## Rules
+- US: 1 dollar = 90 INR
+- CA: 1 dollar = 100 INR
+- Any other country: show a clear error message
+
+## Not included
+- Other countries
+- Live or changing rates
+- Converting from INR to other currencies
+
+Approved by: <PO name> (Product Owner)   Date: <date>
+```
+
+**Save:**
+
+```bash
+git add docs/intent.md
+git commit -m "docs: PO intent for currency converter"
+```
+
+### 2.2 Turn the intent into a spec
 
 **Prompt:**
 
 ```text
-/speckit-specify Build a currency converter that turns an amount in US dollars or Canadian dollars into Indian Rupees (INR).
-
-The user gives an amount and a country code. Only two countries are supported:
-- US: 1 dollar = 90 INR
-- CA: 1 dollar = 100 INR
+/speckit-specify Use docs/intent.md as the Product Owner's intent. Also apply these details:
 
 The result is shown in INR with 2 decimal places. Country codes are accepted in small or capital letters.
 
@@ -247,11 +265,9 @@ Examples that must work exactly like this:
 - abc US -> error "Amount must be a number"
 
 If the input is wrong, the user sees a clear error and never a wrong number.
-
-Not included: other countries, live or changing rates, converting from INR to other currencies.
-
-Why: this is a small proof of concept to practise spec-driven development before a larger project.
 ```
+
+> In our first run we typed the whole idea into the prompt and skipped `intent.md`, so the PO's words ended up in two places. The version above is the corrected way.
 
 **What we got:** `specs/001-currency-converter/spec.md` with 3 user stories, 13 requirements and 5 success criteria, plus `checklists/requirements.md` (16/16 passing).
 
@@ -578,7 +594,8 @@ Each **successful** conversion adds one line: `timestamp | amount | country | re
 | `remote origin already exists` | The remote was added with the placeholder `YOUR-USERNAME` | `git remote set-url origin https://github.com/<you>/currency-converter.git` |
 | Long text pasted into PowerShell broke | Backticks and special characters | Create the file in VS Code (`code FILE`) and paste there |
 | `LF will be replaced by CRLF` | Windows line endings | Harmless; ignore |
-| No feature branch created by Spec Kit | The optional Git hook isn't installed | Create it yourself (Step 0.8) |
+| No feature branch created by Spec Kit | The optional Git hook isn't installed | Create it yourself (Step 0.7) |
+| `docs/intent.md` missing | Skipped while fixing Git setup; the idea was typed straight into the specify prompt | Write `intent.md` first and point `/speckit-specify` at it (Step 2) |
 | `/speckit.specify` not found | Claude Code uses dashes | `/speckit-specify` |
 | Tests fail with plain `python -m pytest` | The default `python` is 3.10, and the project needs 3.11+ | Use the project's `.venv` (see [How to run](#how-to-run)) |
 | The AI marked a task done that needed a human action (PO approval) | Some tasks are human decisions, not code | `/speckit-converge` caught it; record approvals in commits |
