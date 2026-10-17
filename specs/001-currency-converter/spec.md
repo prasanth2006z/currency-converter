@@ -26,6 +26,8 @@
 - Q (Product Owner): What happens if the converted result rounds to 0.00? → A: The error "Amount is too small to convert" is shown and no result (for example 0.00001 US)
 - Q (Product Owner): Which rates-file problems give "Rates are unavailable"? → A: A missing or unreadable file, invalid YAML, a missing or extra country, or any rate that is not a number greater than 0
 - Q (Solution Architect): How are wrong command-line arguments and amounts starting with "-" handled? → A: The wrong number of arguments shows usage and exits with code 2 and no result. A first argument starting with "-" is always the amount, never a command-line option
+- Q (Product Owner): Is there an exception to "an amount starting with - is always the amount"? → A: Yes, only `-h` and `--help`, which show usage and exit with code 0
+- Q (Product Owner): Are amounts with leading zeros such as 00005 accepted? → A: Yes, they mean the same number (00005 US gives 450.00 INR)
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -98,7 +100,8 @@ Each successful conversion is recorded with the amount, country, result and time
 - An empty amount or empty country code shows the matching error (amount: "Amount must be a number"; country: "Only US and CA are supported").
 - An amount written as `.5`, `5.` or `+5` is rejected with "Amount must be a number" and no result.
 - If the rates file is missing, unreadable or invalid YAML, does not contain exactly US and CA, or has a rate that is not a number greater than 0, the user sees the error "Rates are unavailable" and no result.
-- An amount starting with "-" is always treated as the amount: `-5` gives "Amount must be more than 0"; `-1e5`, `-abc` and `-1,000` give "Amount must be a number".
+- An amount starting with "-" is always treated as the amount: `-5` gives "Amount must be more than 0"; `-1e5`, `-abc` and `-1,000` give "Amount must be a number". The only exception is `-h` and `--help`, which show the usage help, exit with code 0 and show no result.
+- Leading zeros are accepted and mean the same number: `00005 US` gives `450.00 INR` and `007.5 CA` gives `750.00 INR`. `000 US` gives "Amount must be more than 0".
 - With the wrong number of arguments (none, only one, or more than two) the user sees a usage message, the program exits with code 2, and no result is shown.
 - The amount is checked before the rates file is read, so `abc US` shows "Amount must be a number" even when the rates file is missing.
 - If the conversion log cannot be written, the user sees the error "Could not write the conversion log" and no result (a result is never shown without its log record).
@@ -129,7 +132,7 @@ Each successful conversion is recorded with the amount, country, result and time
 - **FR-019**: If the conversion log cannot be written, the system MUST show the error "Could not write the conversion log" and no result.
 - **FR-020**: If the converted result rounds to 0.00 (e.g. `0.00001 US`), the system MUST show the error "Amount is too small to convert" and no result, and MUST NOT log it.
 - **FR-021**: With the wrong number of command-line arguments, the system MUST show a usage message, exit with code 2 and show no result.
-- **FR-022**: An amount starting with "-" MUST always be treated as the amount, never as a command-line option (e.g. `-5`, `-1e5`, `-abc`, `-1,000`).
+- **FR-022**: An amount starting with "-" MUST always be treated as the amount, never as a command-line option (e.g. `-5`, `-1e5`, `-abc`, `-1,000`). The one exception is `-h` and `--help`, which show the usage help and exit with code 0, with no result and no log record.
 - **FR-023**: The system MUST check the amount first, then the country, then read the rates file, then calculate.
 
 ### Key Entities

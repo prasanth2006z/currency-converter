@@ -146,6 +146,8 @@ fixture rates file and a temporary log path. Unit tests cover each part.
 | Edge: mixed case `Ca` | `test_mixed_case_country_accepted` |
 | Edge: 2.505 (more than 2 decimals) -> 225.45 INR | `test_extra_decimals_converted_exactly` |
 | Edge: 0.00006 US -> 0.01 INR (smallest that converts) | `test_smallest_convertible_amount_gives_0_01` |
+| Edge: leading zeros (`00005 US` -> 450.00 INR, `007.5 CA` -> 750.00 INR, `000 US` -> "Amount must be more than 0") | `test_leading_zeros_amount_accepted` |
+| FR-022 exception: `-h`, `--help`, `-h US`, `100 --help` show usage, exit 0, no result, no log | `test_help_option_shows_usage_exit_0` (in `test_arguments.py`) |
 | Clarification: half rounds up (0.135 -> 0.14) | `test_half_rounds_up` (calculator) |
 | Calculator keeps exactness for long amounts | `test_exact_for_long_amounts` (calculator) |
 | FR-011: rates come from the file | `test_rates_come_from_rates_file` (acceptance, changed fixture changes the result), `test_load_rates_returns_file_values` (unit) |
